@@ -7,6 +7,10 @@ instance, so the first request after a period of inactivity can take up to
 
 **Repository:** https://github.com/kcpkash888/url-shortener-agentic-assignment
 
+**Java port:** [`java/`](java/) is a behavior-preserving Java 21 + Spring
+Boot rebuild of everything below -- same service, same orchestration
+engine, same three scenarios. See [`java/README.md`](java/README.md).
+
 A working URL shortener service, plus a from-scratch agentic orchestration
 engine that used itself to build three real features into that service
 (greenfield, brownfield, and an ambiguous requirement), producing an audit
