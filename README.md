@@ -1,5 +1,12 @@
 # URL Shortener + Agentic SDLC Orchestrator
 
+**Live demo:** https://url-shortener-agentic-assignment.onrender.com/docs
+(interactive Swagger UI — try `POST /api/urls`, then `GET /{code}`; free-tier
+instance, so the first request after a period of inactivity can take up to
+~50s to wake up).
+
+**Repository:** https://github.com/kcpkash888/url-shortener-agentic-assignment
+
 A working URL shortener service, plus a from-scratch agentic orchestration
 engine that used itself to build three real features into that service
 (greenfield, brownfield, and an ambiguous requirement), producing an audit
