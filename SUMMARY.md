@@ -25,11 +25,12 @@ Concretely, in order:
    guardrails, approvals, observability, metrics.
 3. Wire up "SDLC agents" (`orchestrator/agents/`) that do real work
    against the real codebase -- read actual files, write actual files, run
-   actual pytest -- rather than returning canned strings.
+   an actual `mvn test` build+test cycle -- rather than returning canned
+   strings.
 4. Script and run all three scenarios end to end against the live repo,
-   fix what broke (five real bugs, documented in
-   [TESTING.md](TESTING.md)), and capture the resulting audit
-   trails/reports as the evidence for this summary and [SCENARIOS.md](SCENARIOS.md).
+   fix what broke (real bugs, documented in [TESTING.md](TESTING.md)), and
+   capture the resulting audit trails/reports as the evidence for this
+   summary and [SCENARIOS.md](SCENARIOS.md).
 5. Write the documentation set last, grounded in what the runs actually
    produced (run IDs, exact decision-lineage quotes, exact metrics) rather
    than describing intended behavior that wasn't verified.
@@ -43,18 +44,20 @@ behind each orchestration mechanism.
   delete, redirect, analytics, health, plus safety-validated variants of
   create/bulk-create), SQLite persistence, TTL/LRU cache, fixed-window rate
   limiter.
-- **Orchestration engine**: `orchestrator/` -- graph/executor/context/
-  policy/approvals/observability/metrics, ~700 lines, zero dependency on
-  `app/`.
+- **Orchestration engine**: `orchestrator/` -- Graph/Executor/SharedContext/
+  Policies/Approver/EventLog/MetricsCalculator, zero dependency on `app/`.
 - **Agents**: `orchestrator/agents/` -- requirements, design,
   codebase-analysis, implementation, testing, docs, release.
-- **Scenarios**: `scenarios/greenfield_run.py`, `brownfield_run.py`,
-  `ambiguous_run.py`, `reset_demo_state.py`, `common.py`.
-- **Tests**: 47 passing (`tests/`) -- 33 for the app, 14 for the
-  orchestration engine directly; see [TESTING.md](TESTING.md).
-- **Generated-by-the-pipeline artifacts** (not hand-written): 9 tests
-  across `tests/test_bulk.py`, `tests/test_analytics_enhancement.py`,
-  `tests/test_url_safety.py`; `docs/API_CHANGELOG.md`; per-run
+- **Scenarios**: `scenarios/GreenfieldRun.java`, `BrownfieldRun.java`,
+  `AmbiguousRun.java`, `ResetDemoState.java`, `Common.java`.
+- **Tests**: 48 passing (`mvn test`) -- unit tests for `TtlCache` and
+  `RateLimiter`, Spring Boot integration tests for `ShortenerService` and
+  the HTTP layer, 14 direct unit tests for the orchestration engine, and
+  the tests the three scenarios wrote for themselves; see
+  [TESTING.md](TESTING.md).
+- **Generated-by-the-pipeline artifacts** (not hand-written):
+  `BulkControllerTest.java`, `AnalyticsEnhancementTest.java`,
+  `SafetyValidationTest.java`; `docs/API_CHANGELOG.md`; per-run
   `runs/<id>/REPORT.md`, `events.jsonl`, and `RELEASE_NOTES*.md`.
 - **Documentation**: this file, `README.md`, `ARCHITECTURE.md`,
   `SCENARIOS.md`, `TESTING.md`.
@@ -63,21 +66,22 @@ behind each orchestration mechanism.
 
 | risk / trade-off | how it was handled |
 |---|---|
-| "Agents" are deterministic Python, not LLM calls -- could look like the orchestration is faked | Every agent does real, verifiable work against the live codebase (real file I/O, real `pytest` subprocess, real regex-based route/impact analysis) so the *mechanism* is genuine even though the *reasoning* is heuristic rather than model-driven; see `ARCHITECTURE.md#agents-vs-llm-calls` for exactly where a real model call would plug in. |
+| "Agents" are deterministic Java, not LLM calls -- could look like the orchestration is faked | Every agent does real, verifiable work against the live codebase (real file I/O, real `mvn test` subprocess, real regex-based route/impact analysis) so the *mechanism* is genuine even though the *reasoning* is heuristic rather than model-driven; see `ARCHITECTURE.md#agents-vs-llm-calls` for exactly where a real model call would plug in. |
 | Human approval checkpoints can't involve an actual human in this format | `AutoApprover` implements the same `Approver.decide()` interface a Slack/webhook-backed approver would, applies a real (not rubber-stamp) minimum bar, and is demonstrated actually withholding approval in the security-incident scenario. |
-| Rollback could silently leave the working tree in a worse state than it found | `implementation_agent`'s compensate function restores exact pre-write backups (or deletes newly-created files); this is covered directly by `test_rollback_compensates_succeeded_nodes_and_the_failing_node_itself` and demonstrated for real in the brownfield scenario (file content verified after rollback). |
-| Policy violations could either be ignored after one fix (unsafe) or block forever (breaks recovery) | `unresolved_policy_violations` resolves a violation once its node re-succeeds, while keeping full history for audit -- neither silently forgiving nor permanently punitive. |
+| Rollback could silently leave the working tree in a worse state than it found | `ImplementationAgent`'s compensate function restores exact pre-write backups (or deletes newly-created files); this is covered directly by orchestrator unit tests and demonstrated for real in the brownfield scenario (file content verified after rollback). |
+| Policy violations could either be ignored after one fix (unsafe) or block forever (breaks recovery) | `Policies.unresolvedPolicyViolations` resolves a violation once its node re-succeeds, while keeping full history for audit -- neither silently forgiving nor permanently punitive. |
 | Static domain/alias blocklists (the ambiguous scenario's chosen fix) are a known-incomplete safety measure | Documented explicitly as a risk in the design node's own output and in the decision lineage, with the more-complete alternative (live threat-intel API) recorded as considered-and-rejected with a stated reason, not silently dropped. |
-| Re-running scenarios against an already-mutated codebase could look broken | It's a deliberate guardrail (see `SCENARIOS.md`'s closing section), not a bug -- and `reset_demo_state.py` gives graders a real way to replay from a clean baseline rather than papering over it. |
+| Re-running scenarios against an already-mutated codebase could look broken | It's a deliberate guardrail (see `SCENARIOS.md`'s closing section), not a bug -- and `ResetDemoState.java` gives graders a real way to replay from a clean baseline rather than papering over it. |
 | SQLite + in-process cache/rate-limiter don't scale past one instance | Explicitly scoped as a single-process prototype; `ARCHITECTURE.md` and `TESTING.md` both name the multi-instance gap rather than implying this is production-scale as built. |
+| The implementation agent's output must compile, not just pass assertions | Java is compiled and statically typed, so `TestingAgent.runTests` shelling out to `mvn test` means Maven's compile step doubles as a real, orchestrator-visible exit gate -- a syntax error in generated code fails the same node, for the same reason (`testsMustPass`), that a failing assertion would, with no special-casing needed in the engine. |
 
 ## Validation performed
 
-- Full test suite (`pytest tests/`, 47 tests) run after every scenario, not
+- Full test suite (`mvn test`, 48 tests) run after every scenario, not
   just at the end.
 - Each scenario's `testing` node runs the *real* suite as an orchestrated
   exit gate, not a separate manual step.
-- Live smoke test of the running server (`uvicorn app.main:app`) covering
+- Live smoke test of the running server (`mvn spring-boot:run`) covering
   create, blocked-domain rejection, reserved-alias rejection, redirect,
   analytics (with `top_referrers`/`unique_referrer_count`), and bulk create
   with a mixed success/failure batch -- confirming all three scenarios'
@@ -85,7 +89,7 @@ behind each orchestration mechanism.
   isolated tests.
 - Each scenario's generated `runs/<id>/REPORT.md` and `events.jsonl` were
   read back and checked against the intended behavior (not just "did it
-  exit zero") -- this is how bugs 3, 4, and 5 in `TESTING.md` were caught.
+  exit zero") -- this is how the bugs in `TESTING.md` were caught.
 
 ## Assumptions
 
@@ -113,5 +117,5 @@ stand-in for what would be LLM-backed reasoning in a production system.
 The framework around them -- the part actually being evaluated as the
 "critical differentiator" -- does not depend on that being true; swapping
 the reasoning step for a real model call is a localized change per agent
-function, not a redesign of the graph, executor, policy, or observability
+method, not a redesign of the graph, executor, policy, or observability
 layers.

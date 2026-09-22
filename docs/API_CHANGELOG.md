@@ -2,7 +2,7 @@
 
 ## Bulk short-link creation
 
-_Generated 2026-09-16T15:35:41.729561+00:00 by the docs agent, run `greenfield-20260916T153541-e8a181`._
+_Generated 2026-09-16T17:29:15.147057Z by the docs agent, run `greenfield-java-20260916T172914-e51d57`._
 
 ### API contract
 
@@ -17,11 +17,12 @@ _Generated 2026-09-16T15:35:41.729561+00:00 by the docs agent, run `greenfield-2
 - A large batch is processed synchronously in-request; capped at 50 items to bound worst-case request latency.
 - Partial failure (e.g. one alias conflict in a batch) does not roll back the other items in the batch -- each item is independent by design.
 
+
 ---
 
 ## Analytics top_referrers breakdown
 
-_Generated 2026-09-16T15:35:44.002298+00:00 by the docs agent, run `brownfield-analytics-20260916T153543-183c0b`._
+_Generated 2026-09-16T17:29:46.394876100Z by the docs agent, run `brownfield-analytics-java-20260916T172945-423679`._
 
 ### API contract
 
@@ -29,17 +30,18 @@ _Generated 2026-09-16T15:35:44.002298+00:00 by the docs agent, run `brownfield-a
 
 ### Data model changes
 
-- AnalyticsResponse gains `top_referrers: list[dict]`.
+- AnalyticsResponse gains `topReferrers: List<Map<String,Object>>`.
 
 ### Known risks
 
 - Referrer aggregation adds one more query per analytics call; acceptable at current scale.
 
+
 ---
 
 ## Analytics top_referrers breakdown (+ unique_referrer_count)
 
-_Generated 2026-09-16T15:35:46.355853+00:00 by the docs agent, run `brownfield-analytics-20260916T153543-183c0b`._
+_Generated 2026-09-16T17:30:12.835874300Z by the docs agent, run `brownfield-analytics-java-20260916T172945-423679`._
 
 ### API contract
 
@@ -47,18 +49,19 @@ _Generated 2026-09-16T15:35:46.355853+00:00 by the docs agent, run `brownfield-a
 
 ### Data model changes
 
-- AnalyticsResponse gains `top_referrers: list[dict]`.
-- AnalyticsResponse gains `unique_referrer_count: int`.
+- AnalyticsResponse gains `topReferrers: List<Map<String,Object>>`.
+- AnalyticsResponse gains `uniqueReferrerCount: int`.
 
 ### Known risks
 
 - Referrer aggregation adds one more query per analytics call; acceptable at current scale.
 
+
 ---
 
 ## Reject URLs that point at known-malicious or disallowed domains, and reserve system-critical short codes (api, health, admin) so they cannot be squatted.
 
-_Generated 2026-09-16T15:35:50.800297+00:00 by the docs agent, run `ambiguous-20260916T153550-a27fb2`._
+_Generated 2026-09-16T17:31:09.653204100Z by the docs agent, run `ambiguous-java-20260916T173109-2a5356`._
 
 ### API contract
 
@@ -67,9 +70,10 @@ _Generated 2026-09-16T15:35:50.800297+00:00 by the docs agent, run `ambiguous-20
 
 ### Data model changes
 
-- No schema/table change; validation happens in app/shortener.py:create_link.
+- No schema/table change; validation happens in ShortenerService.createLink.
 
 ### Known risks
 
 - The domain blocklist is static and requires manual maintenance -- a live threat-intel feed was considered and explicitly rejected for this change (see requirements decision lineage) as disproportionate effort for the ask as stated.
 - Reserved-alias list is hardcoded; adding a new reserved word later requires a code change, not just configuration.
+
